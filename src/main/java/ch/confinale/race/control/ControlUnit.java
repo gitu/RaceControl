@@ -2,11 +2,12 @@ package ch.confinale.race.control;
 
 import gnu.io.*;
 
-import java.io.*;
-import java.nio.ByteBuffer;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.util.TooManyListenersException;
 
 public class ControlUnit implements AutoCloseable{
     SerialPort serialPort;
@@ -23,7 +24,6 @@ public class ControlUnit implements AutoCloseable{
     /** Default bits per second for COM port. */
     private static final int DATA_RATE = 19200;
     private String portName;
-    private Scanner inputScanner;
 
     public ControlUnit(String portName){
         this.portName = portName;
@@ -53,12 +53,11 @@ public class ControlUnit implements AutoCloseable{
         output.flush();
 
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        try {
-            byte current;
-            while ((current = input.readByte()) != 1 && current != readTill) {
-                buffer.write(current);
-            }
-        } catch (EOFException eof) {}
+
+        byte current;
+        while ((current = input.readByte()) != 1 && current != readTill) {
+            buffer.write(current);
+        }
         buffer.flush();
         return buffer.toByteArray();
     }

@@ -16,8 +16,6 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class Main {
-    final protected static char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
-
     public static void main(String[] args) throws IOException, InterruptedException, TooManyListenersException, PortInUseException, UnsupportedCommOperationException, NoSuchPortException {
         if( args.length != 1 ) {
             System.out.println( "Usage: <file.yml>" );
@@ -70,7 +68,7 @@ public class Main {
                 List<NewTimeResult> newTimeResults = timeResults.get(newResult.getCarNr());
                 NewTimeResult lastResult = null;
                 if (newTimeResults.size()>0) {
-                    newTimeResults.get(newTimeResults.size()-1);
+                    lastResult = newTimeResults.get(newTimeResults.size()-1);
                 }
                 if (!newResult.equals(lastResult)) {
                     newTimeResults.add(newResult);
