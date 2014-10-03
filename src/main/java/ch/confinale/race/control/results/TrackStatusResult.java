@@ -23,11 +23,11 @@ public class TrackStatusResult implements TimeReadResult {
         gas5 = command[6] & 0x0F;
         gas6 = command[7] & 0x0F;
 
-        startLamp = command[9] & 0x0F;
-        gasMode = command[10] & 0x0F;
+        startLamp = command[10] & 0x0F;
+        gasMode = command[11] & 0x0F;
 
-        pitLaneBitMask = ((command[11] & 0x0F)<<1) + (command[12] & 0x0F);
-        positionMode = command[13] & 0x0F;
+        pitLaneBitMask = ((command[12] & 0x0F)<<1) + (command[13] & 0x0F);
+        positionMode = command[14] & 0x0F;
     }
 
     public int getGas1() {

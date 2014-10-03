@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.*;
 
 public class Main {
@@ -36,10 +37,7 @@ public class Main {
 
     public static void start(Configuration config) throws PortInUseException, NoSuchPortException, UnsupportedCommOperationException, TooManyListenersException, IOException, InterruptedException {
 
-        String raceId = UUID.randomUUID().toString();
         Firebase firebase = new Firebase("https://" + config.getFirebaseName() + ".firebaseio.com/");
-        firebase.child("lastRace").setValue(raceId);
-
 
         ControlUnit controlUnit = new ControlUnit(config.getComPort());
         controlUnit.initialize();
@@ -49,24 +47,36 @@ public class Main {
         controlUnit.sendCommand("=", (byte) '=');
         Thread.sleep(500);
 
-
-        Map<Integer, List<NewTimeResult>> timeResults = new HashMap<>();
-        long fastestRound = Long.MAX_VALUE;
-        long[] fastestCarRound = new long[10];
-        for (int i = 0; i <= 9; i++) {
-            timeResults.put(i, new LinkedList<>());
-            fastestCarRound[i] = Long.MAX_VALUE;
-        }
-
         int count = 0;
         while(controlUnit.sendCommand("?")[1]!=':' || count++<=100) {
             Thread.sleep(30);
         }
 
+        while(true) {
+            startRace(firebase, controlUnit);
+        }
+    }
+
+
+
+    private static void startRace(Firebase firebase, ControlUnit controlUnit) throws IOException, InterruptedException {
+        Map<Integer, List<NewTimeResult>> timeResults = new HashMap<>();
+        for (int i = 0; i <= 9; i++) {
+            timeResults.put(i, new LinkedList<>());
+        }
+
+        String raceId = UUID.randomUUID().toString();
+        firebase.child("lastQualifying").setValue(raceId);
+        Firebase fireRace = firebase.child("races").child(raceId);
+
+        fireRace.child("time").child("qualifying").setValue(LocalDateTime.now().toString());
+        fireRace.child("status").setValue("qualifying");
+        boolean raceEnded = false;
+        boolean qualifying = true;
 
         TrackStatusResult lastTrackStatusResult = null;
-        while (true) {
-            Thread.sleep(100);
+        while (!raceEnded) {
+            Thread.sleep(20);
             byte[] commandResult = controlUnit.sendCommand("?");
 
             if (commandResult[0] == '?' && commandResult[1] == ':') {
@@ -74,8 +84,26 @@ public class Main {
                 if (!trackStatusResult.equals(lastTrackStatusResult)) {
                     System.out.println(trackStatusResult);
                     lastTrackStatusResult = trackStatusResult;
-                }
+                    firebase.child("trackState").setValue(trackStatusResult);
+                    System.out.println(LocalDateTime.now().toString());
+                    fireRace.child("trackStates").child(LocalDateTime.now().toString().replace('.','-')).setValue(trackStatusResult);
 
+                    if (trackStatusResult.getStartLamp()==1) {
+                        firebase.child("lastRace").setValue(raceId);
+                        fireRace.child("status").setValue("race-start");
+                    }
+
+                    if (trackStatusResult.getStartLamp()==2) {
+                        qualifying = false;
+                        for (int i = 0; i <= 9; i++) {
+                            timeResults.put(i, new LinkedList<>());
+                        }
+                    }
+                    if (trackStatusResult.getStartLamp()==0 && lastTrackStatusResult.getStartLamp() != 0) {
+                        fireRace.child("status").setValue("race");
+                        fireRace.child("time").child("race").setValue(LocalDateTime.now().toString());
+                    }
+                }
             } else {
                 NewTimeResult newResult = new NewTimeResult(commandResult);
                 List<NewTimeResult> newTimeResults = timeResults.get(newResult.getCarNr());
@@ -83,10 +111,10 @@ public class Main {
                 if (newTimeResults.size()>0) {
                     lastResult = newTimeResults.get(newTimeResults.size()-1);
                 }
-                firebase.child("race").child(raceId)
-                        .child("car").child(((Integer) newResult.getCarNr()).toString())
+                fireRace
+                        .child("cars").child(((Integer) newResult.getCarNr()).toString())
                         .child("raw")
-                        .child("round").child(((Integer)(newTimeResults.size() - 1)).toString())
+                        .child("round").child(newResult.getCreateTime().toString().replace('.','-'))
                         .setValue(newResult);
                 if (!newResult.equals(lastResult)) {
                     newTimeResults.add(newResult);
@@ -96,27 +124,25 @@ public class Main {
                         System.out.println("Time for car: " + newResult.getCarNr() + ", lap: " + (newTimeResults.size() - 1) + " - "
                                 + ((double) roundTime) / 1000.0 + "s");
 
-                        firebase.child("race").child(raceId)
-                                .child("car").child(((Integer) newResult.getCarNr()).toString())
-                                .child("round").child(((Integer)(newTimeResults.size() - 1)).toString())
-                                .setValue(roundTime);
+                        if (qualifying) {
+                            fireRace
+                                    .child("qualifying/rounds").child(((Integer) (newTimeResults.size() - 2)).toString())
+                                    .child("cars").child(((Integer) newResult.getCarNr()).toString())
+                                    .setValue(roundTime);
+                        } else {
+                            fireRace
+                                    .child("race/rounds").child(((Integer) (newTimeResults.size() - 2)).toString())
+                                    .child("cars").child(((Integer) newResult.getCarNr()).toString())
+                                    .setValue(roundTime);
 
-                        if (fastestRound>roundTime) {
-                            fastestRound = roundTime;
-                            firebase.child("race").child(raceId)
-                                    .child("fastest")
-                                    .setValue(roundTime);
-                        }
-                        if (fastestCarRound[newResult.getCarNr()]>roundTime) {
-                            firebase.child("race").child(raceId)
-                                    .child("car").child(((Integer) newResult.getCarNr()).toString())
-                                    .child("fastest")
-                                    .setValue(roundTime);
+                            if (newTimeResults.size()>=21) {
+                                raceEnded = true;
+                                fireRace.child("time").child("end").setValue(LocalDateTime.now().toString());
+                            }
                         }
                     }
                 }
             }
         }
-
     }
 }

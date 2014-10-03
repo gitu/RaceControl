@@ -1,11 +1,13 @@
 package ch.confinale.race.control.results;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 
 public class NewTimeResult implements TimeReadResult {
     private final int carNr;
     private final long time;
     private final int group;
+    private final LocalDateTime createTime;
 
     public NewTimeResult(byte[] command) {
         assert command[0]=='?';
@@ -27,6 +29,8 @@ public class NewTimeResult implements TimeReadResult {
         result += (byteTime[6] & 0xF);
 
         time = result;
+
+        createTime = LocalDateTime.now();
     }
 
     public static int swap(byte b) {
@@ -75,5 +79,9 @@ public class NewTimeResult implements TimeReadResult {
         result = 31 * result + (int) (time ^ (time >>> 32));
         result = 31 * result + group;
         return result;
+    }
+
+    public LocalDateTime getCreateTime() {
+        return createTime;
     }
 }
