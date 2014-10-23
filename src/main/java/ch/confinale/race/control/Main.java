@@ -3,7 +3,9 @@ package ch.confinale.race.control;
 import ch.confinale.race.control.results.NewTimeResult;
 import ch.confinale.race.control.results.TrackStatusResult;
 import ch.confinale.race.control.utils.RXTXLoader;
+import com.firebase.client.AuthData;
 import com.firebase.client.Firebase;
+import com.firebase.client.FirebaseError;
 import gnu.io.NoSuchPortException;
 import gnu.io.PortInUseException;
 import gnu.io.UnsupportedCommOperationException;
@@ -38,6 +40,18 @@ public class Main {
     public static void start(Configuration config) throws PortInUseException, NoSuchPortException, UnsupportedCommOperationException, TooManyListenersException, IOException, InterruptedException {
 
         Firebase firebase = new Firebase("https://" + config.getFirebaseName() + ".firebaseio.com/");
+        firebase.authWithPassword(config.getUsername(), config.getPassword(), new Firebase.AuthResultHandler() {
+            @Override
+            public void onAuthenticated(AuthData authData) {
+                System.out.println(authData);
+            }
+
+            @Override
+            public void onAuthenticationError(FirebaseError firebaseError) {
+                System.err.println(firebaseError);
+                System.exit(1);
+            }
+        });
 
         ControlUnit controlUnit = new ControlUnit(config.getComPort());
         controlUnit.initialize();
