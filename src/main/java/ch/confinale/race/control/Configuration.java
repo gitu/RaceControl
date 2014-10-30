@@ -6,6 +6,7 @@ public final class Configuration {
     private String comPort;
     private String username;
     private String password;
+    private Boolean provideOwnRXTX;
 
     public String getFirebaseName() {
         return firebaseName;
@@ -40,6 +41,16 @@ public final class Configuration {
         this.password = password;
     }
 
+
+
+    public Boolean getProvideOwnRXTX() {
+        return provideOwnRXTX;
+    }
+
+    public void setProvideOwnRXTX(Boolean provideOwnRXTX) {
+        this.provideOwnRXTX = provideOwnRXTX;
+    }
+
     @Override
     public String toString() {
         return "Configuration{" +
@@ -47,6 +58,7 @@ public final class Configuration {
                 ", comPort='" + comPort + '\'' +
                 ", username='" + username + '\'' +
                 ", password='" + password + '\'' +
+                ", provideOwnRXTX=" + provideOwnRXTX +
                 '}';
     }
 }

@@ -32,7 +32,8 @@ public class Main {
             System.out.println( config.toString() );
         }
 
-        RXTXLoader.load();
+        if (!config.getProvideOwnRXTX())
+            RXTXLoader.load();
 
         start(config);
     }
