@@ -40,7 +40,9 @@ public class RXTXLoader {
 
 	private enum Architecture {
 		X86_64("amd64", "x86_64"),
-		X86("i386", "x86");
+		X86("i386", "x86"),
+        ARM("arm","arm");
+
 
 		public static Architecture fromString(String name) {
 			for (Architecture arch : Architecture.values()) {
